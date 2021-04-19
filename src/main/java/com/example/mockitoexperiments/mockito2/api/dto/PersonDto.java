@@ -9,6 +9,6 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PersonDto {
-    long id;
-    String name;
+    private long id;
+    private String name;
 }
