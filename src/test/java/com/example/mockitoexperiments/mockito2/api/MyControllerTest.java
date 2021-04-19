@@ -1,5 +1,7 @@
 package com.example.mockitoexperiments.mockito2.api;
 
+import com.example.mockitoexperiments.mockito2.api.dto.PersonDto;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.http.MediaType;
@@ -18,6 +20,8 @@ public class MyControllerTest {
     MockMvc mockMvc;
     MyController myController;
 
+    ObjectMapper objectMapper = new ObjectMapper();
+
     @Before
     public void setUp() throws Exception {
         myController = new MyController();
@@ -32,11 +36,30 @@ public class MyControllerTest {
 
     @Test
     public void getNumber() throws Exception {
-        RequestBuilder requestBuilder = MockMvcRequestBuilders.get("/getNumber");
+        RequestBuilder requestBuilder =
+                MockMvcRequestBuilders.get("/getNumber");
         MvcResult mvcResult = mockMvc.perform(requestBuilder).andReturn();
 
         String responseContent = mvcResult.getResponse().getContentAsString();
 
         assertEquals(5, Integer.parseInt(responseContent));
+    }
+
+    @Test
+    public void getPerson() throws Exception {
+        RequestBuilder request = MockMvcRequestBuilders.get("/getPerson");
+        MvcResult mvcResult = mockMvc.perform(request)
+                .andExpect(status().isOk())
+                .andReturn();
+
+        PersonDto personDtoExpected = PersonDto.builder()
+                .id(1)
+                .name("Name1")
+                .build();
+
+        String contentAsString = mvcResult.getResponse().getContentAsString();
+        PersonDto personDtoActual = objectMapper.readValue(contentAsString, PersonDto.class);
+
+        assertEquals(personDtoExpected, personDtoActual);
     }
 }
