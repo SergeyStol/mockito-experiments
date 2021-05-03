@@ -3,12 +3,13 @@ package com.example.mockitoexperiments.mockito2.api;
 import com.example.mockitoexperiments.mockito2.api.dto.PersonDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.RequestBuilder;
@@ -19,11 +20,14 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import java.util.Arrays;
+
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @RunWith(MockitoJUnitRunner.class)
+@Slf4j
 public class MyControllerTest {
     MockMvc mockMvc;
     MyController myController;
@@ -34,7 +38,7 @@ public class MyControllerTest {
     @Mock
     HttpServletResponse response;
 
-    ObjectMapper objectMapper = new ObjectMapper();
+    ObjectMapper mapper = new ObjectMapper();
     PersonDto personDtoExpected = PersonDto.builder()
             .id(1)
             .name("Name1")
@@ -79,7 +83,7 @@ public class MyControllerTest {
 
         // Jackson
         PersonDto personDtoActual =
-                objectMapper.readValue(contentAsString, PersonDto.class);
+                mapper.readValue(contentAsString, PersonDto.class);
         assertEquals(personDtoExpected, personDtoActual);
 
         // Gson
@@ -92,17 +96,56 @@ public class MyControllerTest {
     public void getPerson3() throws Exception {
         RequestBuilder requestBuilder =
                 MockMvcRequestBuilders.get("/getPerson3")
-                .cookie(new Cookie("Name1", "Name1"));
+                        .cookie(new Cookie("Name1", "Name1"));
 
-        doNothing().when(response).addCookie(new Cookie("Name2", "Name2"));
+        doNothing().when(response);
 
         MvcResult mvcResult = mockMvc.perform(requestBuilder)
                 .andExpect(status().isOk())
                 .andReturn();
-        Cookie[] cookies = mvcResult.getResponse().getCookies();
-        for (Cookie cookie : cookies) {
+
+        Cookie[] cookiesActual = mvcResult.getResponse().getCookies();
+        for (Cookie cookie : cookiesActual) {
             System.out.println("Test: " + cookie.getName() + " " + cookie.getValue());
         }
+
+        when(myController.func1(anyString())).thenReturn(100);
+
+        doNothing().when(myController).func2("MyStr");
+
+        Cookie[] cookiesExcepted = new Cookie[2];
+        cookiesExcepted[0] = new Cookie("Name2", "Name2");
+        cookiesExcepted[1] = new Cookie("Name3", "Name3");
+        assertTrue(Arrays.deepEquals(cookiesExcepted, cookiesActual));
+    }
+
+    @Test
+    public void getPerson2() throws Exception {
+        RequestBuilder requestBuilder =
+                MockMvcRequestBuilders
+                        .post("/getPerson2")
+                        .content(mapper.writeValueAsString(personDtoExpected))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON);
+
+        MvcResult mvcResult = mockMvc.perform(requestBuilder)
+                .andExpect(status().isOk())
+                .andReturn();
+
+        PersonDto personDtoActual =
+                mapper.readValue(mvcResult.getResponse().getContentAsString(),
+                        PersonDto.class);
+        log.warn(personDtoActual.toString());
+
+        assertEquals(personDtoExpected, personDtoActual);
+    }
+
+    @Test
+    public void func2() {
+        myController.func2("Hello");
+
+        doNothing().when(myController).func2("Hello world!");
+
 
     }
 }
